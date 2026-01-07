@@ -1,6 +1,6 @@
 # Pierce
 
-English | 简体中文
+English | [简体中文](README.zh.md)
 
 Pierce is a **learning-oriented TCP reverse proxy (NAT traversal) project based on Netty**.
  It is designed to expose internal TCP services to the public network through a lightweight server–client architecture.
