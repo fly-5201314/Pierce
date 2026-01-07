@@ -1,0 +1,17 @@
+server:
+#  host: pierce.example.com   # Server IP 或域名
+  host: localhost   # Server IP 或域名
+  port: 7000                 # 控制通道端口
+
+proxies:
+  - name: flask
+    localPort: 5001
+    remotePort: 8080
+
+  - name: vue
+    localPort: 3006
+    remotePort: 9111
+
+#  - name: ssh
+#    localPort: 22
+#    remotePort: 2222

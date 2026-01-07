@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    <!-- 引入Spring Boot属性 -->
+    <springProperty scope="context" name="appName" source="server.name" defaultValue="default"/>
+
+    <!-- ===================================== 属性配置 ===================================== -->
+
+    <!-- 日志存放路径，使用应用名称作为子目录 -->
+    <!-- 这里可以安全地使用 ${appName}，因为文件是在日志首次写入时创建的，此时Spring属性已经可用 -->
+<!--    <property name="log.path" value="logs/${appName}"/>-->
+    <property name="log.path" value="logs/${appName:-default-app}"/>
+
+    <!-- 控制台日志输出格式，包含颜色标识，便于开发时查看 -->
+    <property name="console.log.pattern"
+              value="%cyan(${appName}) %red(%d{yyyy-MM-dd HH:mm:ss.SSS}) %green([%thread]) %highlight(%-5level) %boldMagenta(%logger{36}) - %msg%n"/>
+
+    <!-- 文件日志输出格式，不包含颜色，便于日志分析工具处理 -->
+    <!-- 添加应用名称和进程ID，便于多实例部署时区分 -->
+    <property name="log.pattern"
+              value="${appName} %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{requestId:-}] - %msg%n"/>
+
+    <!-- 日志文件最大大小，超过此大小将触发滚动 -->
+    <property name="max.file.size" value="50MB"/>
+
+    <!-- 异步日志队列大小配置 -->
+    <property name="async.queue.size" value="1024"/>
+    <property name="async.error.queue.size" value="512"/>
+    <property name="async.debug.queue.size" value="256"/>
+
+    <!-- ===================================== 控制台输出 ===================================== -->
+
+    <!-- 控制台输出Appender，开发环境使用 -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${console.log.pattern}</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ===================================== 文件输出 ===================================== -->
+
+    <!-- 控制台日志文件输出，记录所有控制台日志 -->
+    <appender name="file_console" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/console.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/console.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <maxFileSize>${max.file.size}</maxFileSize>
+            <totalSizeCap>1GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+    </appender>
+
+    <!-- INFO级别日志文件输出 -->
+    <appender name="file_info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/info.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>${max.file.size}</maxFileSize>
+            <totalSizeCap>2GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- ERROR级别日志文件输出 -->
+    <appender name="file_error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>60</maxHistory>
+            <maxFileSize>${max.file.size}</maxFileSize>
+            <totalSizeCap>1GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- DEBUG级别日志文件输出，仅在需要调试时启用 -->
+    <appender name="file_debug" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/debug.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/debug.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>3</maxHistory>
+            <maxFileSize>${max.file.size}</maxFileSize>
+            <totalSizeCap>500MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern}</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- ===================================== 异步日志输出 ===================================== -->
+
+    <!-- INFO级别异步日志输出，提高应用性能 -->
+    <appender name="async_info" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志，即使队列满了也不丢弃 -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- 队列大小，使用属性变量便于统一管理 -->
+        <queueSize>${async.queue.size}</queueSize>
+        <!-- 设置为false，避免在应用关闭时丢失日志 -->
+        <includeCallerData>false</includeCallerData>
+        <!-- 添加实际的appender引用 -->
+        <appender-ref ref="file_info"/>
+    </appender>
+
+    <!-- ERROR级别异步日志输出 -->
+    <appender name="async_error" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志 -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- 队列大小 -->
+        <queueSize>${async.error.queue.size}</queueSize>
+        <!-- 错误日志保留调用者数据，便于排查问题 -->
+        <includeCallerData>true</includeCallerData>
+        <!-- 添加实际的appender引用 -->
+        <appender-ref ref="file_error"/>
+    </appender>
+
+    <!-- DEBUG级别异步日志输出，仅在需要时启用 -->
+    <appender name="async_debug" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>0</discardingThreshold>
+        <queueSize>${async.debug.queue.size}</queueSize>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="file_debug"/>
+    </appender>
+
+    <!-- ===================================== 特殊日志配置 ===================================== -->
+
+    <!-- 条件性引入外部配置，如Logstash配置 -->
+    <!--   <if condition='isDefined("logstash.enabled") && property("logstash.enabled").equals("true")'>
+           <then>
+               <include resource="logback-logstash.xml"/>
+           </then>
+       </if>-->
+
+    <!-- ===================================== 日志级别配置 ===================================== -->
+
+    <!-- 生产环境日志配置 -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="console"/>
+            <appender-ref ref="async_info"/>
+            <appender-ref ref="async_error"/>
+            <appender-ref ref="file_console"/>
+        </root>
+
+        <!-- 生产环境特定包的日志级别配置 -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="com.draft" level="INFO"/>
+    </springProfile>
+
+    <!-- 开发环境日志配置 -->
+    <springProfile name="dev">
+        <root level="DEBUG">
+            <appender-ref ref="console"/>
+            <appender-ref ref="async_info"/>
+            <appender-ref ref="async_error"/>
+            <appender-ref ref="async_debug"/>
+        </root>
+
+        <!-- 开发环境特定包的日志级别配置 -->
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+        <logger name="com.draft" level="DEBUG"/>
+    </springProfile>
+
+    <!-- 测试环境日志配置 -->
+    <springProfile name="test">
+        <root level="INFO">
+            <appender-ref ref="console"/>
+            <appender-ref ref="async_info"/>
+            <appender-ref ref="async_error"/>
+        </root>
+
+        <!-- 测试环境特定包的日志级别配置 -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="com.draft" level="DEBUG"/>
+    </springProfile>
+
+    <!-- 默认日志配置 -->
+    <root level="INFO">
+        <appender-ref ref="console"/>
+        <appender-ref ref="async_info"/>
+        <appender-ref ref="async_error"/>
+        <appender-ref ref="file_console"/>
+    </root>
+
+    <!-- 特定包的日志级别配置 -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="com.draft" level="DEBUG"/>
+</configuration>
